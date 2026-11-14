@@ -7,17 +7,28 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: publish-extension
+  cancel-in-progress: false
+
 jobs:
   publish:
+    name: Publish to Visual Studio Marketplace
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
-      - run: bun install --frozen-lockfile
-      - run: bun run vscode:prepublish
-      - uses: HaaLeo/publish-vscode-extension@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Validate and build
+        run: bun run vscode:prepublish
+      - name: Publish extension
+        uses: HaaLeo/publish-vscode-extension@v2
         with:
           pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
           registryUrl: https://marketplace.visualstudio.com
