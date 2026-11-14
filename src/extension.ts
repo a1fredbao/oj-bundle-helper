@@ -1,40 +1,53 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
-import { compress } from './compress';
-import { bundle, Run } from './bundle';
+import path from "node:path";
+import * as vscode from "vscode";
+import { bundle } from "./bundle";
+import { transformCpp } from "./cpp";
 
-async function bundleAndPaste() {
-	const editor = vscode.window.activeTextEditor;
-	if (editor) {
-		const document = editor.document;
-		const text = document.getText();
-		try {
-			const result: Run = await bundle(text);
-			console.log("[oj-bundle] Result: ", result);
-			if (result.code !== 0) {
-				vscode.window.showErrorMessage(
-					"Failed to bundle the code. Error: " + result.stderr
-				);
-				console.log("[oj-bundle] Error: ", result.stderr);
-			} else {
-				vscode.env.clipboard.writeText(compress(result.stdout));
-				vscode.window.showInformationMessage('Successfully copied to clipboard.');
-			}
-		} catch (error) {
-			vscode.window.showErrorMessage("Failed to bundle the code. Error: " + error);
-		}
-	}
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
-	const disposable = vscode.commands.registerCommand(
-		'oj-bundle.bundle-and-paste', bundleAndPaste
-	);
-	context.subscriptions.push(disposable);
+async function bundleAndPaste(extensionPath: string): Promise<void> {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    return;
+  }
+
+  try {
+    const result = await bundle(editor.document.getText());
+    if (result.code !== 0) {
+      throw new Error(result.stderr || `oj-bundle exited with ${result.code}`);
+    }
+
+    const shortenLocals = vscode.workspace
+      .getConfiguration("oj-bundle")
+      .get("shortenLocals", true);
+    const transformed = await transformCpp(result.stdout, {
+      resourceDirectory: path.join(extensionPath, "dist"),
+      shortenLocals,
+    });
+    await vscode.env.clipboard.writeText(transformed.code);
+
+    if (transformed.warnings.length > 0) {
+      await vscode.window.showWarningMessage(
+        `Bundle copied, but ${transformed.warnings.join(" ")}`,
+      );
+    } else {
+      await vscode.window.showInformationMessage("Bundle copied to clipboard.");
+    }
+  } catch (error) {
+    await vscode.window.showErrorMessage(
+      `Failed to bundle the code: ${errorMessage(error)}`,
+    );
+  }
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() { }
+export function activate(context: vscode.ExtensionContext): void {
+  context.subscriptions.push(
+    vscode.commands.registerCommand("oj-bundle.bundle-and-paste", () =>
+      bundleAndPaste(context.extensionPath),
+    ),
+  );
+}
+
+export function deactivate(): void {}

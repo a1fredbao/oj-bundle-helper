@@ -1,12 +1,19 @@
 # oj-bundle
 
-This project is a vscode extension that integrates the `oj-bundle` tool from [verification-helper](https://github.com/online-judge-tools/verification-helper) and a typescript version of [CppCodeCompressor](https://github.com/Ruakker/CppCodeCompresser/). It aims to help competitive programmers to compress their code and generate a bundle for submission.
+A VS Code extension for competitive programmers. It invokes
+[`oj-bundle`](https://github.com/online-judge-tools/verification-helper), performs
+syntax-aware compression, and copies the submission-ready source to the clipboard.
 
-## Features
+## What It Does
 
-This extension provides a command `oj-bundle.bundle-and-paste` that compresses the code and generates a bundle for submission. The bundle is then copied to the clipboard.
+- Bundles the active C++ source with `oj-bundle`.
+- Removes comments and redundant whitespace without changing token boundaries.
+- Uses Tree-sitter to shorten conservatively resolved local variables and parameters.
+- Skips local renaming when the syntax tree has errors and falls back to whitespace
+  compression.
 
-You can invoke the command by pressing `Ctrl+Shift+P` and typing `oj-bundle.bundle-and-paste`. Or you can use the shortcut `Ctrl+Alt+S` or `Cmd+Alt+S` (on macOS) to invoke the command directly.
+Run `oj-bundle: Bundle and paste` from the command palette, or press
+`Ctrl+Alt+S` (`Cmd+Alt+S` on macOS).
 
 ## Requirements
 
@@ -18,7 +25,32 @@ pip3 install online-judge-verify-helper
 
 ## Extension Settings
 
-This extension contributes the following settings:
+- `oj-bundle.args`: Additional arguments passed to `oj-bundle`.
+- `oj-bundle.executable`: Executable path for `oj-bundle`.
+- `oj-bundle.shortenLocals`: Enable syntax-aware local variable shortening. Defaults
+  to `true`.
 
-* `oj-bundle.args`: Space seperated additional flags passed to oj-bundle. Example '-I path/to/your/library1 -I path/to/your/library2'
-* `oj-bundle.executable`: Executable path to the `oj-bundle` tool.
+## Rename Safety
+
+Only variables and parameters that can be resolved inside a single function are
+considered. Names are left unchanged when:
+
+- a function contains a syntax error or another declaration with the same name;
+- the symbol is a class member, namespace member, type, function, template parameter,
+  or macro;
+- the reference is qualified or appears in preprocessor code.
+
+Short names are unique within the function and avoid identifiers already present in
+that function.
+
+## Development
+
+Install [Bun](https://bun.sh/) and run:
+
+```bash
+bun install
+bun run check
+bun run build
+```
+
+Tests do not launch Electron. The final extension is written to `dist/`.

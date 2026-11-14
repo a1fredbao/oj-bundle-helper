@@ -77,6 +77,8 @@ web_modules/
 # Next.js build output
 .next
 out
+resources/tree-sitter
+*.vsix
 
 # Nuxt.js build / generate output
 .nuxt

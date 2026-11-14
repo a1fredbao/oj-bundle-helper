@@ -6,4 +6,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
-- Initial release
+- Replaced the legacy whitespace scanner with syntax-aware C++ compression.
+- Fixed template parameter boundaries such as `int> = 0`.
+- Added conservative scope-based local variable shortening.
+- Added fallback behavior for syntax errors and unreadable grammar assets.
+- Migrated the development workflow from npm/ESLint to Bun/Biome.
+- Added cross-platform Bun CI, build verification, and Dependabot configuration.
