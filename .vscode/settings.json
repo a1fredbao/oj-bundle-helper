@@ -8,5 +8,7 @@
 	},
 	// Turn off tsc task auto detection because Bun builds the extension.
 	"js/ts.tsc.autoDetect": "off",
-	"js/ts.tsdk.path": "node_modules/typescript"
+	"js/ts.tsdk.path": "node_modules/typescript",
+	// Tab size = 2 spaces
+	"editor.tabSize": 2,
 }
