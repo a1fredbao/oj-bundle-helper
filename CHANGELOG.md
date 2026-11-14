@@ -12,3 +12,4 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Added fallback behavior for syntax errors and unreadable grammar assets.
 - Migrated the development workflow from npm/ESLint to Bun/Biome.
 - Added cross-platform Bun CI, build verification, and Dependabot configuration.
+- Added a Bun release command for version bumps and CHANGELOG updates.

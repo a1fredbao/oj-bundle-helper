@@ -53,4 +53,20 @@ bun run check
 bun run build
 ```
 
+### Version Bumps
+
+The `bump` command updates `package.json`, moves the current `[Unreleased]`
+CHANGELOG entries into a dated release section, and leaves the changes ready for
+review:
+
+```bash
+bun run bump patch
+bun run bump minor --pre-release
+bun run bump major --dry-run
+bun run bump patch --commit --branch chore/version-bump
+```
+
+Run `bun run bump --help` for all options. A clean working tree is required unless
+`--force` is passed.
+
 Tests do not launch Electron. The final extension is written to `dist/`.

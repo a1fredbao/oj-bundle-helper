@@ -63,6 +63,7 @@
   "scripts": {
     "assets": "bun run scripts/prepare-assets.ts",
     "build": "bun run assets && bun run scripts/build.ts",
+    "bump": "bun run scripts/bump-version.ts",
     "check": "bun run typecheck && bun run lint && bun run test",
     "format": "biome format --write src scripts",
     "lint": "biome check src scripts",
@@ -76,8 +77,10 @@
     "@types/bun": "^1.4.4",
     "@types/cross-spawn": "^6.0.6",
     "@types/node": "26.6.6",
+    "@types/semver": "7.7.1",
     "@types/vscode": "1.98.0",
     "@vscode/vsce": "^4.1.1",
+    "semver": "7.7.3",
     "tree-sitter-cpp": "0.23.4",
     "typescript": "5.9.3"
   },
