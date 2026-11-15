@@ -104,22 +104,10 @@ export function parseBumpArgs(
 			continue;
 		}
 
-		if (argument.startsWith("--preid=")) {
-			preid = argument.slice("--preid=".length);
-			preidSpecified = true;
-			continue;
-		}
-
 		if (argument === "--branch") {
 			branch = optionValue(args, index, "--branch");
 			commit = true;
 			index++;
-			continue;
-		}
-
-		if (argument.startsWith("--branch=")) {
-			branch = argument.slice("--branch=".length);
-			commit = true;
 			continue;
 		}
 
