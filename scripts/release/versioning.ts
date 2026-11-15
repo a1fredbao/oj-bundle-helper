@@ -3,7 +3,6 @@ import semver from "semver";
 export type BumpType = "major" | "minor" | "patch";
 
 export type BumpOptions = {
-	branch?: string;
 	bump: BumpType;
 	commit: boolean;
 	dryRun: boolean;
@@ -20,8 +19,7 @@ Options:
 	--preid <name>			Prerelease identifier (default: beta)
 	--dry-run, -n			 Show the planned version without writing files
 	--force, -f				 Skip the clean working tree check
-	--commit, -c				Commit package.json and CHANGELOG.md
-	--branch <name>		 Create a branch before committing (implies --commit)
+	--no-commit				 Create bump/<version> but skip the commit
 	--help, -h					Show this help`;
 
 function isBumpType(value: string): value is BumpType {
@@ -44,8 +42,7 @@ export function parseBumpArgs(
 	args: readonly string[],
 ): BumpOptions | undefined {
 	let bump: BumpType | undefined;
-	let branch: string | undefined;
-	let commit = false;
+	let commit = true;
 	let dryRun = false;
 	let force = false;
 	let preRelease = false;
@@ -97,6 +94,11 @@ export function parseBumpArgs(
 			continue;
 		}
 
+		if (argument === "--no-commit") {
+			commit = false;
+			continue;
+		}
+
 		if (argument === "--preid") {
 			preid = optionValue(args, index, "--preid");
 			preidSpecified = true;
@@ -104,10 +106,9 @@ export function parseBumpArgs(
 			continue;
 		}
 
-		if (argument === "--branch") {
-			branch = optionValue(args, index, "--branch");
-			commit = true;
-			index++;
+		if (argument.startsWith("--preid=")) {
+			preid = argument.slice("--preid=".length);
+			preidSpecified = true;
 			continue;
 		}
 
@@ -123,12 +124,7 @@ export function parseBumpArgs(
 	if (preidSpecified && !preRelease) {
 		throw new Error("--preid requires --pre-release.");
 	}
-	if (branch && branch.trim().length === 0) {
-		throw new Error("--branch cannot be empty.");
-	}
-
 	return {
-		branch,
 		bump,
 		commit,
 		dryRun,
@@ -136,6 +132,10 @@ export function parseBumpArgs(
 		preRelease,
 		preid,
 	};
+}
+
+export function bumpBranchName(version: string): string {
+	return `bump/${version}`;
 }
 
 export function nextVersion(

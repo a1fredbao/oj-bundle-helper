@@ -66,18 +66,20 @@ bun run build
 
 ### Version Bumps
 
-The `bump` command updates `package.json`, moves the current `[Unreleased]`
-CHANGELOG entries into a dated release section, and leaves the changes ready for
-review:
+The `bump` command creates a `bump/<version>` branch, updates `package.json`,
+moves the current `[Unreleased]` CHANGELOG entries into a dated release section,
+and commits both files:
 
 ```bash
 bun run bump patch
 bun run bump minor --pre-release
 bun run bump major --dry-run
-bun run bump patch --commit --branch chore/version-bump
+bun run bump patch --no-commit
 ```
 
-Run `bun run bump --help` for all options. A clean working tree is required unless
+`--dry-run` does not create a branch or modify files. `--no-commit` still creates
+the branch and updates both files, but leaves the changes uncommitted. Run
+`bun run bump --help` for all options. A clean working tree is required unless
 `--force` is passed.
 
 Tests do not launch Electron. The final extension is written to `dist/`.

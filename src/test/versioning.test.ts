@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	bumpBranchName,
 	nextVersion,
 	parseBumpArgs,
 	releaseDate,
@@ -10,9 +11,8 @@ import {
 describe("bump version", () => {
 	test("parses a basic bump command", () => {
 		expect(parseBumpArgs(["patch"])).toEqual({
-			branch: undefined,
 			bump: "patch",
-			commit: false,
+			commit: true,
 			dryRun: false,
 			force: false,
 			preRelease: false,
@@ -20,24 +20,21 @@ describe("bump version", () => {
 		});
 	});
 
-	test("parses prerelease and commit options", () => {
+	test("parses prerelease and no-commit options", () => {
 		expect(
-			parseBumpArgs([
-				"minor",
-				"--pre-release",
-				"--preid=rc",
-				"--branch",
-				"chore/version",
-			]),
+			parseBumpArgs(["minor", "--pre-release", "--preid=rc", "--no-commit"]),
 		).toEqual({
-			branch: "chore/version",
 			bump: "minor",
-			commit: true,
+			commit: false,
 			dryRun: false,
 			force: false,
 			preRelease: true,
 			preid: "rc",
 		});
+	});
+
+	test("uses a versioned bump branch", () => {
+		expect(bumpBranchName("1.1.0")).toBe("bump/1.1.0");
 	});
 
 	test("rejects preid without prerelease", () => {
