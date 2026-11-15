@@ -67,7 +67,7 @@
     "check": "bun run typecheck && bun run lint && bun run test",
     "format": "biome format --write src scripts",
     "lint": "biome check src scripts",
-    "package": "bun run build && vsce package",
+    "package": "vsce package",
     "test": "bun run assets && bun test src/test",
     "typecheck": "tsc --noEmit",
     "vscode:prepublish": "bun run check && bun run build"
