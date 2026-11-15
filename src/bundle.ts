@@ -1,61 +1,69 @@
-import { workspace, window } from "vscode";
-import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
-
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-
-function createTempFile(src: string): string {
-    const tempDir = os.tmpdir();
-    const fileName = `oj-bundle-temp-${Date.now()}-${Math.floor(Math.random() * 10000)}.cpp`;
-    const filePath = path.join(tempDir, fileName);
-
-    fs.writeFileSync(filePath, src, 'utf8');
-    return filePath;
-}
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import spawn from "cross-spawn";
+import stringArgv from "string-argv";
+import { window, workspace } from "vscode";
 
 export type Run = {
-    stdout: string;
-    stderr: string;
-    code: number | null;
+	code: number | null;
+	stderr: string;
+	stdout: string;
 };
 
-export const bundle = (src: string): Promise<Run> => {
-    const file = createTempFile(src);
-    const config = workspace.getConfiguration('oj-bundle');
-    const executable = config.get('executable', 'oj-bundle');
-    const argsStr: string = config.get('args', '');
-    const args = argsStr ? argsStr.split(/\s+/) : [];
-    const editor = window.activeTextEditor;
-    if (editor) {
-        const filePath = editor.document.uri.path;
-        // get its father directory
-        const workspaceDir = path.dirname(filePath);
-        // -I <workspacePath> is added to the args
-        console.log("[oj-bundle] Workspace Path:", workspaceDir);
-        args.push('-I', workspaceDir);
-    }
-    args.push(file);
-    console.log("[oj-bundle] Command:", executable, args);
-    return new Promise((resolve, reject) => {
-        const cp: ChildProcessWithoutNullStreams = spawn(executable, args);
-        let stdout = '';
-        let stderr = '';
-        cp.stdout.on('data', (data: Buffer) => {
-            stdout += data.toString();
-        });
-        cp.stderr.on('data', (data: Buffer) => {
-            stderr += data.toString();
-        });
-        cp.on('error', (error) => {
-            reject(error);
-        });
-        cp.on('close', (code: number) => {
-            resolve({
-                stdout,
-                stderr,
-                code
-            });
-        });
-    });
-};
+function sourceDirectory(): string | undefined {
+	const editor = window.activeTextEditor;
+	if (!editor) {
+		return undefined;
+	}
+
+	const folder = workspace.getWorkspaceFolder(editor.document.uri);
+	return folder?.uri.fsPath ?? path.dirname(editor.document.uri.fsPath);
+}
+
+async function runProcess(
+	executable: string,
+	args: readonly string[],
+	cwd: string,
+): Promise<Run> {
+	return new Promise((resolve, reject) => {
+		const child = spawn(executable, args, { cwd });
+		let stdout = "";
+		let stderr = "";
+
+		child.stdout?.on("data", (chunk: Buffer) => {
+			stdout += chunk.toString();
+		});
+		child.stderr?.on("data", (chunk: Buffer) => {
+			stderr += chunk.toString();
+		});
+		child.once("error", reject);
+		child.once("close", (code) => {
+			resolve({ code, stderr, stdout });
+		});
+	});
+}
+
+export async function bundle(source: string): Promise<Run> {
+	const tempDirectory = await mkdtemp(
+		path.join(os.tmpdir(), "oj-bundle-helper-"),
+	);
+	const inputFile = path.join(tempDirectory, "main.cpp");
+	const directory = sourceDirectory();
+
+	try {
+		await writeFile(inputFile, source, "utf8");
+
+		const config = workspace.getConfiguration("oj-bundle");
+		const executable = config.get("executable", "oj-bundle");
+		const args = stringArgv(config.get("args", ""));
+		if (directory) {
+			args.push("-I", directory);
+		}
+		args.push(inputFile);
+
+		return await runProcess(executable, args, directory ?? tempDirectory);
+	} finally {
+		await rm(tempDirectory, { recursive: true, force: true });
+	}
+}

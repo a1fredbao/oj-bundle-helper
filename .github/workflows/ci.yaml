@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check (${{ matrix.os }})
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Verify LF line endings
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          if git ls-files --eol -- src scripts | grep -q 'w/crlf'; then
+            git ls-files --eol -- src scripts | grep 'w/crlf'
+            exit 1
+          fi
+      - name: Typecheck, lint, and test
+        run: bun run check
+      - name: Build extension
+        run: bun run build
+      - name: Validate bundled entrypoint
+        run: node --check dist/extension.js
+
+  package:
+    name: Package VSIX
+    needs: check
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Package extension
+        run: bun run package
+      - name: Upload VSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: oj-bundle-vsix
+          path: "*.vsix"
+          if-no-files-found: error
