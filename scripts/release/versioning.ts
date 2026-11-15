@@ -52,6 +52,10 @@ export function parseBumpArgs(
   let preid = "beta";
   let preidSpecified = false;
 
+  if (args.length === 0) {
+    return undefined;
+  }
+
   for (let index = 0; index < args.length; index++) {
     const argument = args[index];
 
