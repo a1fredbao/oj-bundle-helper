@@ -82,4 +82,8 @@ the branch and updates both files, but leaves the changes uncommitted. Run
 `bun run bump --help` for all options. A clean working tree is required unless
 `--force` is passed.
 
+When a prerelease is promoted to the stable version with the same
+`major.minor.patch`, notes from matching prerelease sections are carried into the
+stable section and the prerelease sections are removed.
+
 Tests do not launch Electron. The final extension is written to `dist/`.

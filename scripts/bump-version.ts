@@ -5,6 +5,7 @@ import {
 	bumpBranchName,
 	nextVersion,
 	parseBumpArgs,
+	releaseCommitArgs,
 	releaseDate,
 	replacePackageVersion,
 	USAGE,
@@ -59,7 +60,12 @@ const branch = bumpBranchName(version);
 const date = releaseDate();
 const packageContent = replacePackageVersion(packageJson, version);
 const changelog = readFileSync(changelogPath, "utf8");
-const changelogContent = updateChangelog(changelog, version, date);
+const changelogContent = updateChangelog(
+	changelog,
+	version,
+	date,
+	currentVersion,
+);
 
 console.log(`[bump] ${currentVersion} -> ${version}`);
 console.log(`[bump] Branch: ${branch}`);
@@ -80,8 +86,7 @@ writeFileSync(changelogPath, changelogContent);
 console.log("[bump] Updated package.json and CHANGELOG.md.");
 
 if (options.commit) {
-	gitI(["add", "--", "package.json", "CHANGELOG.md"]);
-	gitI(["commit", "-m", `chore(release): v${version}`]);
+	gitI(releaseCommitArgs(version));
 	console.log(`[bump] Committed version ${version}.`);
 } else {
 	console.log(`[bump] Skipped commit; changes are ready on ${branch}.`);

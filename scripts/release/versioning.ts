@@ -11,6 +11,14 @@ export type BumpOptions = {
 	preid: string;
 };
 
+type ChangelogSection = {
+	body: string;
+	heading: string;
+	version: string;
+};
+
+export const RELEASE_FILES = ["package.json", "CHANGELOG.md"] as const;
+
 export const USAGE = `Usage:
 	bun run bump <patch|minor|major> [options]
 
@@ -138,6 +146,17 @@ export function bumpBranchName(version: string): string {
 	return `bump/${version}`;
 }
 
+export function releaseCommitArgs(version: string): string[] {
+	return [
+		"commit",
+		"--only",
+		"-m",
+		`chore(release): v${version}`,
+		"--",
+		...RELEASE_FILES,
+	];
+}
+
 export function nextVersion(
 	currentVersion: string,
 	options: Pick<BumpOptions, "bump" | "preRelease" | "preid">,
@@ -170,39 +189,133 @@ export function replacePackageVersion(
 	return packageJson.replace(pattern, `$1${version}$2`);
 }
 
+function parseChangelog(changelog: string): {
+	prefix: string;
+	sections: ChangelogSection[];
+} {
+	const headingPattern = /^## \[([^\]]+)\](?: - [^\n]+)?[ \t]*$/gm;
+	const matches = [...changelog.matchAll(headingPattern)];
+	if (matches.length === 0) {
+		throw new Error("CHANGELOG.md does not contain any version sections.");
+	}
+
+	const prefix = changelog.slice(0, matches[0].index).trimEnd();
+	const sections = matches.map((match, index) => {
+		const headingEnd = (match.index ?? 0) + match[0].length;
+		const bodyEnd = matches[index + 1]?.index ?? changelog.length;
+		return {
+			body: changelog.slice(headingEnd, bodyEnd).trim(),
+			heading: match[0].trimEnd(),
+			version: match[1],
+		};
+	});
+
+	return { prefix, sections };
+}
+
+function renderChangelog(
+	prefix: string,
+	sections: readonly ChangelogSection[],
+): string {
+	const blocks = [
+		prefix.trim(),
+		...sections.map((section) =>
+			section.body.length > 0
+				? `${section.heading}\n\n${section.body}`
+				: section.heading,
+		),
+	].filter((block) => block.length > 0);
+
+	return `${blocks.join("\n\n").trimEnd()}\n`;
+}
+
+function isPrereleasePromotion(
+	currentVersion: string | undefined,
+	nextVersionValue: string,
+): boolean {
+	if (!currentVersion) {
+		return false;
+	}
+
+	const current = semver.parse(currentVersion);
+	const next = semver.parse(nextVersionValue);
+	return Boolean(
+		current &&
+			next &&
+			current.prerelease.length > 0 &&
+			next.prerelease.length === 0 &&
+			current.major === next.major &&
+			current.minor === next.minor &&
+			current.patch === next.patch,
+	);
+}
+
+function isMatchingPrerelease(
+	sectionVersion: string,
+	stableVersion: string,
+): boolean {
+	const prerelease = semver.parse(sectionVersion);
+	const stable = semver.parse(stableVersion);
+	return Boolean(
+		prerelease &&
+			stable &&
+			prerelease.prerelease.length > 0 &&
+			prerelease.major === stable.major &&
+			prerelease.minor === stable.minor &&
+			prerelease.patch === stable.patch,
+	);
+}
+
 export function updateChangelog(
 	changelog: string,
 	version: string,
 	date: string,
+	currentVersion?: string,
 ): string {
-	const marker = "## [Unreleased]";
-	const markerIndex = changelog.indexOf(marker);
-	if (markerIndex === -1) {
-		throw new Error(`Unable to find "${marker}" in CHANGELOG.md.`);
+	const { prefix, sections } = parseChangelog(changelog);
+	const unreleasedIndex = sections.findIndex(
+		(section) => section.version === "Unreleased",
+	);
+	if (unreleasedIndex === -1) {
+		throw new Error('Unable to find "## [Unreleased]" in CHANGELOG.md.');
 	}
 
-	const markerLineEnd = changelog.indexOf("\n", markerIndex);
-	const bodyStart = markerLineEnd === -1 ? changelog.length : markerLineEnd + 1;
-	const headingPattern = /^## \[[^\]]+\]/gm;
-	headingPattern.lastIndex = bodyStart;
-	const nextHeading = headingPattern.exec(changelog);
-	const bodyEnd = nextHeading?.index ?? changelog.length;
-	const pending = changelog.slice(bodyStart, bodyEnd).trim();
+	const unreleased = sections[unreleasedIndex];
+	const promotedSections = isPrereleasePromotion(currentVersion, version)
+		? sections.filter((section) =>
+				isMatchingPrerelease(section.version, version),
+			)
+		: [];
+	const releaseNotes = [
+		unreleased.body,
+		...promotedSections.map((section) => section.body),
+	]
+		.filter((body) => body.length > 0)
+		.join("\n\n");
 
-	if (pending.length === 0) {
+	if (releaseNotes.length === 0) {
 		throw new Error(
-			"The Unreleased section is empty. Add release notes first.",
+			"The Unreleased section is empty and no prerelease notes are available.",
 		);
 	}
 
-	const before = changelog.slice(0, markerIndex).trimEnd();
-	const after = nextHeading ? changelog.slice(bodyEnd).trimStart() : "";
-	const release = `## [${version}] - ${date}`;
-	const sections = [before, marker, release, pending, after].filter(
-		(section) => section.length > 0,
+	const promotedVersions = new Set(
+		promotedSections.map((section) => section.version),
+	);
+	const remainingSections = sections.filter(
+		(section, index) =>
+			index !== unreleasedIndex && !promotedVersions.has(section.version),
 	);
 
-	return `${sections.join("\n\n").trimEnd()}\n`;
+	return renderChangelog(prefix, [
+		{ body: "", heading: "## [Unreleased]", version: "Unreleased" },
+		{
+			body: releaseNotes,
+			heading: `## [${version}] - ${date}`,
+			version,
+		},
+		...remainingSections,
+	]);
 }
 
 export function releaseDate(date = new Date()): string {

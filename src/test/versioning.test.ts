@@ -3,6 +3,7 @@ import {
 	bumpBranchName,
 	nextVersion,
 	parseBumpArgs,
+	releaseCommitArgs,
 	releaseDate,
 	replacePackageVersion,
 	updateChangelog,
@@ -87,6 +88,18 @@ describe("bump version", () => {
 		).toBe("1.0.5");
 	});
 
+	test("commits only release files with the existing message", () => {
+		expect(releaseCommitArgs("1.1.0")).toEqual([
+			"commit",
+			"--only",
+			"-m",
+			"chore(release): v1.1.0",
+			"--",
+			"package.json",
+			"CHANGELOG.md",
+		]);
+	});
+
 	test("updates only the package version field", () => {
 		const source = '{\n  "version": "1.0.4",\n  "name": "oj-bundle"\n}\n';
 		expect(replacePackageVersion(source, "1.1.0")).toContain(
@@ -118,7 +131,37 @@ describe("bump version", () => {
 	test("rejects an empty Unreleased section", () => {
 		expect(() =>
 			updateChangelog("## [Unreleased]\n\n## [1.0.4]\n", "1.0.5", "2026-11-15"),
-		).toThrow("The Unreleased section is empty");
+		).toThrow("The Unreleased section is empty and no prerelease notes");
+	});
+
+	test("carries prerelease notes into a stable promotion", () => {
+		const source = `# Change Log
+
+## [Unreleased]
+
+- Added a release pipeline.
+
+## [1.0.4] - 2026-01-01
+
+- Previous release.
+`;
+		const prerelease = updateChangelog(
+			source,
+			"1.1.0-beta.0",
+			"2026-11-01",
+			"1.0.4",
+		);
+		const stable = updateChangelog(
+			prerelease,
+			"1.1.0",
+			"2026-11-15",
+			"1.1.0-beta.0",
+		);
+
+		expect(stable).toContain("## [Unreleased]\n\n## [1.1.0] - 2026-11-15");
+		expect(stable).toContain("- Added a release pipeline.");
+		expect(stable).toContain("## [1.0.4] - 2026-01-01");
+		expect(stable).not.toContain("## [1.1.0-beta.0]");
 	});
 
 	test("formats a local calendar date", () => {
