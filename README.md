@@ -20,6 +20,12 @@ Run `oj-bundle: Bundle and paste` from the command palette, or press
 Install `verification-helper`:
 
 ```bash
+uv tool install online-judge-verify-helper
+```
+
+or (not quite recommended) via pip:
+
+```bash
 pip3 install online-judge-verify-helper
 ```
 
@@ -29,6 +35,11 @@ pip3 install online-judge-verify-helper
 - `oj-bundle.executable`: Executable path for `oj-bundle`.
 - `oj-bundle.shortenLocals`: Enable syntax-aware local variable shortening. Defaults
   to `true`.
+
+> [!WARNING]
+> According to [AtCoder Rules against Generative AI](https://info.atcoder.jp/entry/llm-rules-en), code obfuscation is prohibited in AtCoder contests.
+>
+> Therefore, if you are to compete in one of such contests, you should disable `oj-bundle.shortenLocals` in such contests.
 
 ## Rename Safety
 
