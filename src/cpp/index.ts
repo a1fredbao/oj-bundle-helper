@@ -47,9 +47,16 @@ export async function transformCpp(
 		}
 	}
 
-	return {
-		code: await minifyCpp(transformed, options.resourceDirectory),
-		renames,
-		warnings,
-	};
+	let code = transformed;
+	try {
+		code = await minifyCpp(transformed, options.resourceDirectory);
+	} catch (error) {
+		warnings.push(
+			`C++ output was not minified: ${
+				error instanceof Error ? error.message : String(error)
+			}`,
+		);
+	}
+
+	return { code, renames, warnings };
 }
