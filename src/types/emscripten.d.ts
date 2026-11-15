@@ -1,3 +1,3 @@
 interface EmscriptenModule {
-  locateFile?: (path: string, scriptDirectory: string) => string;
+	locateFile?: (path: string, scriptDirectory: string) => string;
 }

@@ -6,12 +6,12 @@ const output = path.join(root, "resources", "tree-sitter");
 
 await mkdir(output, { recursive: true });
 await Promise.all([
-  copyFile(
-    path.join(root, "node_modules", "web-tree-sitter", "web-tree-sitter.wasm"),
-    path.join(output, "web-tree-sitter.wasm"),
-  ),
-  copyFile(
-    path.join(root, "node_modules", "tree-sitter-cpp", "tree-sitter-cpp.wasm"),
-    path.join(output, "tree-sitter-cpp.wasm"),
-  ),
+	copyFile(
+		path.join(root, "node_modules", "web-tree-sitter", "web-tree-sitter.wasm"),
+		path.join(output, "web-tree-sitter.wasm"),
+	),
+	copyFile(
+		path.join(root, "node_modules", "tree-sitter-cpp", "tree-sitter-cpp.wasm"),
+		path.join(output, "tree-sitter-cpp.wasm"),
+	),
 ]);
